@@ -782,6 +782,7 @@ end
 function compilationunit:dump() terra.dumpmodule(self.llvm_cu) end
 
 terra.nativetarget = terra.newtarget {}
+terra.cudatarget = terra.newtarget {Triple = 'nvptx64-nvidia-cuda', FloatABIHard = true}
 terra.jitcompilationunit = terra.newcompilationunit(terra.nativetarget,true) -- compilation unit used for JIT compilation, will eventually specify the native architecture
 
 terra.llvm_gcdebugmetatable = { __gc = function(obj)
@@ -3981,11 +3982,11 @@ function compilationunit:saveobj(filename,filekind,arguments,optimize)
         --filekind is missing, shift arguments to the right
         filekind,arguments,optimize = nil,filekind,arguments
     end
-    -- default behavior for optimize is true
-    if (optimize == nil) then
+
+    if optimize == nil then
         optimize = true
-    end 
-       
+    end
+
     if filekind == nil and filename ~= nil then
         --infer filekind from string
         if filename:match("%.o$") then
@@ -4008,7 +4009,8 @@ function compilationunit:saveobj(filename,filekind,arguments,optimize)
     if filename == nil and mustbefile[filekind] then
         error(filekind .. " must be written to a file")
     end
-    return terra.saveobjimpl(filename,filekind,self,optimize,arguments or {})
+
+    return terra.saveobjimpl(filename,filekind,self,arguments or {},optimize)
 end
 
 function terra.saveobj(filename,filekind,env,arguments,target,optimize)
@@ -4218,7 +4220,7 @@ function terra.type(t)
 end
 
 function terra.linklibrary(filename)
-    assert(not filename:match(".bc$"), "linklibrary no longer supports llvm bitcode, use terralib.linkllvm instead.")
+    assert(not filename:match("%.bc$"), "linklibrary no longer supports llvm bitcode, use terralib.linkllvm instead.")
     terra.linklibraryimpl(filename)
 end
 function terra.linkllvm(filename,target,fromstring)

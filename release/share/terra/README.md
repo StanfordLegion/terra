@@ -97,12 +97,22 @@ Expect it to print a lot of junk out. At the end it will summarize the results:
 Building Terra
 ==============
 
-If the binary releases are not appropriate, then you can also build Terra from source. Terra uses LLVM 3.5, Clang 3.5 (the C/C++ frontend for LLVM), and LuaJIT 2.0.5 -- a tracing-JIT for Lua code.  Terra will download and compile LuaJIT for you, but you will need to install Clang and LLVM.
+If the binary releases are not appropriate, then you can also build Terra from source. Terra uses LLVM, Clang (the C/C++ frontend for LLVM), and LuaJIT 2.0.5 -- a tracing-JIT for Lua code.  Terra will download and compile LuaJIT for you, but you will need to install Clang and LLVM.
 
+### Supported LLVM Versions ###
+
+Terra supports the following LLVM versions:
+
+  * LLVM 3.4
+  * LLVM 3.5 (tested in Travis, supports debug info)
+  * LLVM 3.6
+  * LLVM 3.7
+  * LLVM 3.8 (used frequently, tested in Travis)
+  * LLVM 3.9 (used frequently)
 
 ### Windows ###
 
-For instructions on installing Terra in Windows see this [readme](https://github.com/zdevito/terra/blob/master/msvc/README.md). You will need a built copy of LLVM and Clang 3.5, as well as a copy of the LuaJIT sources.
+For instructions on installing Terra in Windows see this [readme](https://github.com/zdevito/terra/blob/master/msvc/README.md). You will need a built copy of LLVM and Clang, as well as a copy of the LuaJIT sources.
 
 
 ### Linux/OSX ###
@@ -124,10 +134,11 @@ Now run make in the `terra` directory to download LuaJIT and build Terra:
 
 If you do not create a `Makefile.inc`, the Makefile will look for the LLVM config script and Clang using these values:
 
-    LLVM_CONFIG = $(shell which llvm-config)
-    LLVM_COMPILER_BIN = $(shell $(LLVM_CONFIG) --bindir)
-    LLVM_CXX = $(LLVM_COMPILER_BIN)/clang++
-    LLVM_CC  = $(LLVM_COMPILER_BIN)/clang
+    LLVM_CONFIG ?= $(shell which llvm-config-3.5 llvm-config | head -1)
+    LLVM_PREFIX ?= $(shell $(LLVM_CONFIG) --prefix)
+    CLANG ?= $(shell which clang-3.5 clang | head -1)
+    CXX ?= $(CLANG)++
+    CC  ?= $(CLANG)
 
 If your installation has these files in a different place, you can override these defaults in the `Makefile.inc` that you created in the `terra` directory.
 

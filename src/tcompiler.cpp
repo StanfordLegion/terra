@@ -960,7 +960,7 @@ struct CCallingConv {
     
     Function * CreateFunction(Module * M, Obj * ftype, const Twine & name) {
         Classification * info = ClassifyFunction(ftype);
-        Function * fn = Function::Create(info->fntype, Function::ExternalLinkage, name, M);
+        Function * fn = Function::Create(info->fntype, Function::InternalLinkage, name, M);
         AttributeFnOrCall(fn,info);
         #if LLVM_VERSION > 32 && defined(__arm__)
             fn->addAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::NoUnwind);
@@ -1152,7 +1152,10 @@ static GlobalVariable * CreateGlobalVariable(TerraCompilationUnit * CU, Obj * gl
         llvmconstant = EmitConstantInitializer(CU,&constant);
     }
     int as = global->number("addressspace");
-    return new GlobalVariable(*CU->M, typ, global->boolean("constant"), GlobalValue::ExternalLinkage, llvmconstant, name, NULL,GlobalVariable::NotThreadLocal, as);
+    GlobalValue::LinkageTypes linkage =
+        (global->boolean("constant") && !global->boolean("extern"))
+        ? GlobalValue::InternalLinkage : GlobalValue::ExternalLinkage;
+    return new GlobalVariable(*CU->M, typ, global->boolean("constant"), linkage, llvmconstant, name, NULL, GlobalVariable::NotThreadLocal, as);
 }
 
 static bool AlwaysShouldCopy(GlobalValue * G, void * data) { return true; }
@@ -1250,7 +1253,11 @@ struct FunctionEmitter {
             funcobj->obj("type",&ftype);
             //function name is $+name so that it can't conflict with any symbols imported from the C namespace
             fstate->func = CC->CreateFunction(M,&ftype, Twine(StringRef((isextern) ? "" : "$"),name));
-            
+            if (isextern) {
+                // Set external linkage for extern functions.
+                fstate->func->setLinkage(GlobalValue::ExternalLinkage);
+            }
+
             if(funcobj->hasfield("alwaysinline")) {
                 if(funcobj->boolean("alwaysinline")) {
                     fstate->func->ADDFNATTR(AlwaysInline);
@@ -2604,6 +2611,7 @@ static int terra_compilationunitaddvalue(lua_State * L) { //entry point into com
         } else {
             gv = EmitFunction(CU,&value,NULL);
         }
+        gv->setLinkage(GlobalValue::ExternalLinkage); // User explicitly exported this function.
         CU->Ty = NULL; CU->CC = NULL; CU->symbols = NULL; CU->tooptimize = NULL;
         if(modulename) {
             if(GlobalValue * gv2 = CU->M->getNamedValue(modulename))
@@ -2873,12 +2881,15 @@ static int terra_saveobjimpl(lua_State * L) {
     
     const char * filename = lua_tostring(L, 1); //NULL means write to memory
     std::string filekind = lua_tostring(L,2);
-    bool optimize = lua_toboolean(L,4);
-    int argument_index = 5;
+
+    int argument_index = 4;
+    bool optimize = lua_toboolean(L,5);
+
     lua_getfield(L,3,"llvm_cu");
     TerraCompilationUnit * CU = (TerraCompilationUnit*) terra_tocdatapointer(L,-1); assert(CU);
-    if (optimize)
+    if (optimize) {
         llvmutil_optimizemodule(CU->M,CU->TT->tm);
+    }
     //TODO: interialize the non-exported functions?
     std::vector<const char *> args;
     int nargs = lua_objlen(L,argument_index);
