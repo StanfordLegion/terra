@@ -575,7 +575,10 @@ class Types {
         std::string name = typ->asstring("name");
         bool isreserved = beginsWith(name, "struct.") || beginsWith(name, "union.");
         name = (isreserved) ? std::string("$") + name : name;
-        return StructType::create(*CU->TT->ctx, name);
+        if (isreserved)
+            return StructType::create(*CU->TT->ctx, name);
+        else
+            return StructType::create(*CU->TT->ctx);
     }
     bool beginsWith(const std::string & s, const std::string & prefix) {
         return s.substr(0,prefix.size()) == prefix;
@@ -2878,6 +2881,7 @@ static int terra_saveobjimpl(lua_State * L) {
     
     const char * filename = lua_tostring(L, 1); //NULL means write to memory
     std::string filekind = lua_tostring(L,2);
+
     int argument_index = 4;
     bool optimize = lua_toboolean(L,5);
 

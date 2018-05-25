@@ -4009,6 +4009,7 @@ function compilationunit:saveobj(filename,filekind,arguments,optimize)
     if filename == nil and mustbefile[filekind] then
         error(filekind .. " must be written to a file")
     end
+
     return terra.saveobjimpl(filename,filekind,self,arguments or {},optimize)
 end
 
